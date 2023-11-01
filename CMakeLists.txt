@@ -19,10 +19,9 @@ set(MP2_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 include_directories("${MP2_INCLUDE}" gtest)
 
 #BUILD
-add_subdirectory(src)
 add_subdirectory(gtest)
 add_subdirectory(test)
-
+add_executable (polish_notation src/main.cpp include/polish_notation.h)
 
 # REPORT
 message( STATUS "")
