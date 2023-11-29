@@ -6,22 +6,48 @@
 
 /*
 currentStatus 				lexemeType 			nextStatus
-waitSt						number				numberSt
-waitSt						bin_operator			errorSt
-waitSt						function			funcSt
-waitSt						end				end
-numberSt					number				errorSt
-numberSt 					bin_operator			binOperatorSt
-numberSt					function			errorSt
-numberSt					end				end
-binOperatorSt					number				numberSt
-binOperatorSt					bin_operator			errorSt
-binOperatorSt					function			funcSt
-binOperatorSt					end				errorSt
-funcSt						number				numberSt
-funcSt						bin_operator			errorSt
-funcSt						function			funcSt
-funcSt						end				errorSt
+waitSt					number				numberSt
+waitSt					bin_operator			errorSt
+waitSt					function			funcSt
+waitSt					leftBracket			leftBracketSt
+waitSt					rightBracket			errorSt
+waitSt					end				end
+
+numberSt				number				errorSt
+numberSt 				bin_operator			binOperatorSt
+numberSt				function			errorSt
+numberSt				leftBracket			errorSt
+numberSt				rightBracket			rightBracketSt
+numberSt				end				end
+
+binOperatorSt				number				numberSt
+binOperatorSt				bin_operator			errorSt
+binOperatorSt				function			funcSt
+binOperatorSt				leftBracket			leftBracketSt
+binOperatorSt				rightBracket			errorSt
+binOperatorSt				end				errorSt
+
+funcSt					number				numberSt
+funcSt					bin_operator			errorSt
+funcSt					function			funcSt
+funcSt					leftBracket			leftBracketSt
+funcSt					rightBracket			errorSt
+funcSt					end				errorSt
+
+leftBracketSt				number				numberSt	
+leftBracketSt				bin_operator			errorSt
+leftBracketSt				function			funcSt
+leftBracketSt				leftBracket			leftBracketSt
+leftBracketSt				rightBracket			errorSt
+leftBracketSt				end				errorSt
+
+rightBracketSt				number				errorSt	
+rightBracketSt				bin_operator			binOperatorSt
+rightBracketSt				function			errorSt
+rightBracketSt				leftBracket			errorSt
+rightBracketSt				rightBracket			rightBracketSt
+rightBracketSt				end				end
+
 */
 using namespace std;
 bool isDigit(char c) {
@@ -32,6 +58,8 @@ enum TypeLexeme {
 	number,
 	bin_operator,
 	function
+	leftBracket,
+	rightBracket
 };
 
 struct Lexema {
@@ -45,7 +73,9 @@ enum Status {
 	numberSt,
 	binOperatorSt,
 	errorSt,
-	funcSt
+	funcSt,
+	leftBracketSt,
+	rightBracketSt
 };
 
 vector<Lexema> lexemas;
@@ -88,22 +118,44 @@ vector<Lexema> parse(string input) {
 			if (l.type == number) status = numberSt;
 			else if (l.type==bin_operator) status = errorSt;
 			else if(l.type == function) status = funcSt;
+			else if (l.type == leftBracket) status = leftBracketSt;
+			else if (l.type == rightBracket) status = errorSt;
 			else if(next_pos==input.size()) break;
 		case numberSt:
 			if (l.type == number) status = errorSt;
 			else if (l.type==bin_operator) status = binOperatorSt;
 			else if(l.type == function) status = errorSt;
+			else if (l.type == leftBracket) status = errorSt;
+			else if (l.type == rightBracket) status = rightBracketSt;
 			else if(next_pos==input.size()) break;
 		case binOperatorSt:
 			if (l.type == number) status = numberSt;
 			else if (l.type==bin_operator) status = errorSt;
 			else if(l.type == function) status = funcSt;
+			else if (l.type == leftBracket) status = leftBracketSt;
+			else if (l.type == rightBracket) status = errorSt;
 			else if(next_pos==input.size()) status=errorSt;
 		case funcSt:
 			if (l.type == number) status = numberSt;
 			else if (l.type==bin_operator) status = errorSt;
 			else if(l.type == function) status = funcSt;
+			else if (l.type == leftBracket) status = leftBracketSt;
+			else if (l.type == rightBracket) status = errorSt;
 			else if(next_pos==input.size()) status==errorSt;
+		case leftBracketSt:
+			if (l.type == number) status = numberSt;
+			else if (l.type==bin_operator) status = errorSt;
+			else if(l.type == function) status = funcSt;
+			else if (l.type == leftBracket) status = leftBracketSt;
+			else if (l.type == rightBracket) status = errorSt;
+			else if(next_pos==input.size()) status==errorSt;
+		case rightBracketSt:
+			if (l.type == number) status = errorSt;
+			else if (l.type==bin_operator) status = binOperatorSt;
+			else if(l.type == function) status = errorSt;
+			else if (l.type == leftBracket) status = errorSt;
+			else if (l.type == rightBracket) status = rightBracketSt;
+			else if(next_pos==input.size()) break;
 	}
 	return v;
 }
