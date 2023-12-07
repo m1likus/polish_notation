@@ -3,63 +3,101 @@
 #include <vector>
 #include <map>
 #include <set>
-
+#include <stack>
+#include <stdio.h>
+#include <iostream>
 /*
-currentStatus 				lexemeType 			nextStatus
+currentStatus 			lexemeType 			nextStatus
 waitSt					number				numberSt
-waitSt					bin_operator			errorSt
+waitSt					bin_operator		errorSt
 waitSt					function			funcSt
 waitSt					leftBracket			leftBracketSt
-waitSt					rightBracket			errorSt
-waitSt					end				end
+waitSt					rightBracket		errorSt
+waitSt					un_minus			unMinSt
+waitSt					end					end
 
 numberSt				number				errorSt
-numberSt 				bin_operator			binOperatorSt
+numberSt 				bin_operator		binOperatorSt
 numberSt				function			errorSt
 numberSt				leftBracket			errorSt
-numberSt				rightBracket			rightBracketSt
-numberSt				end				end
+numberSt				rightBracket		rightBracketSt
+numberSt				un_minus			errorSt
+numberSt				end					end
 
-binOperatorSt				number				numberSt
-binOperatorSt				bin_operator			errorSt
-binOperatorSt				function			funcSt
-binOperatorSt				leftBracket			leftBracketSt
-binOperatorSt				rightBracket			errorSt
-binOperatorSt				end				errorSt
+binOperatorSt			number				numberSt
+binOperatorSt			bin_operator		errorSt
+binOperatorSt			function			funcSt
+binOperatorSt			leftBracket			leftBracketSt
+binOperatorSt			rightBracket		errorSt
+binOperatorSt			un_minus			errorSt
+binOperatorSt			end					errorSt
 
 funcSt					number				numberSt
-funcSt					bin_operator			errorSt
+funcSt					bin_operator		errorSt
 funcSt					function			funcSt
 funcSt					leftBracket			leftBracketSt
-funcSt					rightBracket			errorSt
-funcSt					end				errorSt
+funcSt					rightBracket		errorSt
+funcSt					un_minus			unMinSt
+funcSt					end					errorSt
 
-leftBracketSt				number				numberSt	
-leftBracketSt				bin_operator			errorSt
-leftBracketSt				function			funcSt
-leftBracketSt				leftBracket			leftBracketSt
-leftBracketSt				rightBracket			errorSt
-leftBracketSt				end				errorSt
+leftBracketSt			number				numberSt	
+leftBracketSt			bin_operator		errorSt
+leftBracketSt			function			funcSt
+leftBracketSt			leftBracket			leftBracketSt
+leftBracketSt			rightBracket		errorSt
+leftBracketSt			un_minus			unMinSt
+leftBracketSt			end					errorSt
 
-rightBracketSt				number				errorSt	
-rightBracketSt				bin_operator			binOperatorSt
-rightBracketSt				function			errorSt
-rightBracketSt				leftBracket			errorSt
-rightBracketSt				rightBracket			rightBracketSt
-rightBracketSt				end				end
+rightBracketSt			number				errorSt	
+rightBracketSt			bin_operator		binOperatorSt
+rightBracketSt			function			errorSt
+rightBracketSt			leftBracket			errorSt
+rightBracketSt			rightBracket		rightBracketSt
+rightBracketSt			un_minus			errorSt
+rightBracketSt			end					end
+
+unMinSt					number				numberSt
+unMinSt					bin_operator		errorSt
+unMinSt					function			funcSt
+unMinSt					leftBracket			leftBracketSt
+unMinSt					rightBracket		errorSt
+unMinSt					un_minus			errorSt
+unMinSt					end					errorSt
 
 */
+
+
 using namespace std;
+//проверка на цифру
 bool isDigit(char c) {
 	return (c >= '0' && c <= '9');
 }
+//проверка скобок
+bool bracketCheck(string str) {
+	int lb = 0, rb = 0;
+	std::stack <int> s;
+	for (int i = 0; i < str.size(); i++) {
+		if (str[i] == '(') {
+			lb++;
+			s.push(0);
+		}
+		else if (str[i] == ')') {
+			rb++;
+			if (!s.empty()) s.pop();
+		}
+	}
+	if (s.empty() && lb == rb) return true;
+	else return false;
+}
 
+//виды лексем
 enum TypeLexeme {
 	number,
 	bin_operator,
-	function
+	function,
 	leftBracket,
-	rightBracket
+	rightBracket,
+	un_minus
 };
 
 struct Lexema {
@@ -67,6 +105,13 @@ struct Lexema {
 	TypeLexeme type = TypeLexeme::number;
 	string name;
 };
+//вывод лексемы
+ostream& operator <<(ostream& os, const Lexema L) {
+	if (L.type == number) return os << L.value;
+	else if (L.type == bin_operator || L.type == leftBracket || L.type == rightBracket
+		|| L.type == un_minus || L.type == function)
+		return os << L.name;
+}
 
 enum Status {
 	waitSt,
@@ -75,110 +120,186 @@ enum Status {
 	errorSt,
 	funcSt,
 	leftBracketSt,
-	rightBracketSt
+	rightBracketSt,
+	unMinSt	
 };
 
-vector<Lexema> lexemas;
-
-Lexema getLexema(string input, int pos, int& nextPos) {
-	Lexema lexeme;
-	//if the symbols is number we start searching
-	if (isDigit) {
-		int value = input[pos] - '0';
-		pos++;
-		nextPos++;
-		while (input[pos]) {
-			value *= 10;
-			value += input[pos] - '0';
+struct arithmeticExpr {
+	string infix;
+	string postfix;
+	vector<Lexema> lexems;
+	map <char, int> priority;
+	
+	Lexema getLexema(string input, int pos, int& nextPos) {
+		Lexema lexeme;
+		//if the symbols is number we start searching
+		if (input[pos] == ' ') {
 			pos++;
 			nextPos++;
 		}
-		lexeme.value = value;
-		lexeme.type = number;
-	}
-	// if the symbol is a binary operator
-	if (input[pos]=="+" ||  input[pos]=="-" || input[pos]=="*" || input[pos]=="/"){
-		nextPos++;
-		lexeme.type = bin_opeartor;
-		lexeme.name = input[pos];
-	}
-	//if there's function
-	
-	return lexeme;
-}
-
-vector<Lexema> parse(string input) {
-	Status status = waitSt;
-	int pos = 0, next_pos = 0;
-	vector<Lexema> v;
-	while (next_pos != input.size()) {
-		Lexema l = getLexema(input, pos, next_pos);
-	switch(status):
-		case waitSt:
-			if (l.type == number) status = numberSt;
-			else if (l.type==bin_operator) status = errorSt;
-			else if(l.type == function) status = funcSt;
-			else if (l.type == leftBracket) status = leftBracketSt;
-			else if (l.type == rightBracket) status = errorSt;
-			else if(next_pos==input.size()) break;
-		case numberSt:
-			if (l.type == number) status = errorSt;
-			else if (l.type==bin_operator) status = binOperatorSt;
-			else if(l.type == function) status = errorSt;
-			else if (l.type == leftBracket) status = errorSt;
-			else if (l.type == rightBracket) status = rightBracketSt;
-			else if(next_pos==input.size()) break;
-		case binOperatorSt:
-			if (l.type == number) status = numberSt;
-			else if (l.type==bin_operator) status = errorSt;
-			else if(l.type == function) status = funcSt;
-			else if (l.type == leftBracket) status = leftBracketSt;
-			else if (l.type == rightBracket) status = errorSt;
-			else if(next_pos==input.size()) status=errorSt;
-		case funcSt:
-			if (l.type == number) status = numberSt;
-			else if (l.type==bin_operator) status = errorSt;
-			else if(l.type == function) status = funcSt;
-			else if (l.type == leftBracket) status = leftBracketSt;
-			else if (l.type == rightBracket) status = errorSt;
-			else if(next_pos==input.size()) status==errorSt;
-		case leftBracketSt:
-			if (l.type == number) status = numberSt;
-			else if (l.type==bin_operator) status = errorSt;
-			else if(l.type == function) status = funcSt;
-			else if (l.type == leftBracket) status = leftBracketSt;
-			else if (l.type == rightBracket) status = errorSt;
-			else if(next_pos==input.size()) status==errorSt;
-		case rightBracketSt:
-			if (l.type == number) status = errorSt;
-			else if (l.type==bin_operator) status = binOperatorSt;
-			else if(l.type == function) status = errorSt;
-			else if (l.type == leftBracket) status = errorSt;
-			else if (l.type == rightBracket) status = rightBracketSt;
-			else if(next_pos==input.size()) break;
-	}
-	return v;
-}
-
-class arithmeticExpr {
-	string infix;
-	string postfix;
-	vector<string> lexems;
-	map <char, int> priority;
-	//map <char, double> operands;
-
-	
-	void toPostfix() {
-		//parsing();
-	
+		if (isDigit(input[pos])) {
+			int value = input[pos] - '0';
+			pos++;
+			nextPos++;
+			while (isDigit(input[pos])) {
+				value *= 10;
+				value += input[pos] - '0';
+				pos++;
+				nextPos++;
+			}
+			lexeme.value = value;
+			lexeme.type = number;
+		}
+		//checking unary minus
+		else if (input[pos] == '-' && pos == 0) {
+			lexeme.type = un_minus;
+			lexeme.name = input[pos];
+			nextPos++;
+		}
+		else if (pos != 0 && input[pos] == '-' && (input[pos - 1] == '(')) {
+				lexeme.type = un_minus;
+				lexeme.name = input[pos];
+				nextPos++;
+		}
+		// if the symbol is a binary operator
+		else if (input[pos] == '+' || input[pos] == '-' || input[pos] == '*' || input[pos] == '/') {
+			lexeme.type = bin_operator;
+			lexeme.name = input[pos];
+			nextPos++;
+		}
+		//if there's function
+		else if (input[pos] == 's' || input[pos] == 'c') {
+			string check = "";
+			if (pos + 2 >= input.size()) throw("wrong");
+			for (int i = 0; i < 3; i++) {
+				check += input[pos + i];
+			}
+			if (check == "sin" || check == "cos" || check == "ctg") {
+				nextPos += 3;
+				lexeme.type = function;
+				lexeme.name = check;
+			}
+		}
+		else if (input[pos] == 't') {
+			string check = "";
+			if (pos + 1 >= input.size()) throw("wrong");
+			for (int i = 0; i < 2; i++) {
+				check += input[pos + i];
+			}
+			if (check == "tg") {
+				nextPos += 2;
+				lexeme.type = function;
+				lexeme.name = check;
+			}
+		}
+		//if a left bracket
+		else if (input[pos] == '(') {
+			lexeme.type = leftBracket;
+			lexeme.name = input[pos];
+			nextPos++;
+		}
+		//if there's right bracket
+		else if (input[pos] == ')') {
+			lexeme.type = rightBracket;
+			lexeme.name = input[pos];
+			nextPos++;
+		}
+		else throw ("wrong");
+		return lexeme;
 	}
 public:
+	void parse(string input) {
+		int pos = 0, next_pos = 0;
+		Status status = waitSt;
+		while (next_pos != input.size()) {
+			Lexema l = getLexema(input, pos, next_pos);
+			pos = next_pos;
+			switch (status) {
+			case waitSt:
+				if (l.type == number) status = numberSt;
+				else if (l.type == bin_operator) status = errorSt;
+				else if (l.type == function) status = funcSt;
+				else if (l.type == leftBracket) status = leftBracketSt;
+				else if (l.type == rightBracket) status = errorSt;
+				else if (l.type == un_minus) status = unMinSt;
+				else if (next_pos == input.size()) break;
+				break;
+			case numberSt:
+				if (l.type == number) status = errorSt;
+				else if (l.type == bin_operator) status = binOperatorSt;
+				else if (l.type == function) status = errorSt;
+				else if (l.type == leftBracket) status = errorSt;
+				else if (l.type == rightBracket) status = rightBracketSt;
+				else if (l.type == un_minus) status = errorSt;
+				else if (next_pos == input.size()) break;
+				break;
+			case binOperatorSt:
+				if (l.type == number) status = numberSt;
+				else if (l.type == bin_operator) status = errorSt;
+				else if (l.type == function) status = funcSt;
+				else if (l.type == leftBracket) status = leftBracketSt;
+				else if (l.type == rightBracket) status = errorSt;
+				else if (l.type == un_minus) status = errorSt;
+				else if (next_pos == input.size()) status = errorSt;
+				break;
+			case funcSt:
+				if (l.type == number) status = numberSt;
+				else if (l.type == bin_operator) status = errorSt;
+				else if (l.type == function) status = funcSt;
+				else if (l.type == leftBracket) status = leftBracketSt;
+				else if (l.type == rightBracket) status = errorSt;
+				else if (l.type == un_minus) status = unMinSt;
+				else if (next_pos == input.size()) status == errorSt;
+				break;
+			case leftBracketSt:
+				if (l.type == number) status = numberSt;
+				else if (l.type == bin_operator) status = errorSt;
+				else if (l.type == function) status = funcSt;
+				else if (l.type == leftBracket) status = leftBracketSt;
+				else if (l.type == rightBracket) status = errorSt;
+				else if (l.type == un_minus) status = unMinSt;
+				else if (next_pos == input.size()) status == errorSt;
+				break;
+			case rightBracketSt:
+				if (l.type == number) status = errorSt;
+				else if (l.type == bin_operator) status = binOperatorSt;
+				else if (l.type == function) status = errorSt;
+				else if (l.type == leftBracket) status = errorSt;
+				else if (l.type == rightBracket) status = rightBracketSt;
+				else if (l.type == un_minus) status = errorSt;
+				else if (next_pos == input.size()) break;
+				break;
+			case unMinSt:
+				if (l.type == number) status = numberSt;
+				else if (l.type == bin_operator) status = errorSt;
+				else if (l.type == function) status = funcSt;
+				else if (l.type == leftBracket) status = leftBracketSt;
+				else if (l.type == rightBracket) status = errorSt;
+				else if (l.type == un_minus) status = errorSt;
+				else if (next_pos == input.size()) status = errorSt;
+				break;
+			}
+			if (status == errorSt) {
+				throw("Error Status");
+				return;
+			}
+			lexems.push_back(l);
+		}
+	}
+	void toPostfix() {
+		//parsing();
+
+	}
 	arithmeticExpr(string infx) : infix(infx) {
 		priority = { {'+',1},{'-',1}, {'/',2},{'*',2},
 			{'sin',2},{'cos',2}, {'tg',2},{'ctg',2},{'(',0}};
-		toPostfix();
+		//toPostfix();
 	}
-
+	//вывод вектора лексем
+	void print() {
+		for (int i = 0; i < lexems.size(); i++)
+			std::cout << lexems[i] << " ";
+	}
 
 	std::string getInfix() {
 		return infix;
@@ -186,22 +307,10 @@ public:
 	std::string getPostfix() {
 		return postfix;	
 	}
-
-	//double calculating(const map<char, double>& values) {
 	double calculating(){
 
 	}
 };
-
-bool bracketCheck(string str) {
-	int lb = 0, rb = 0;
-	for (int i = 0; i < str.size(); i++) {
-		if (str[i] == '(') lb++;
-		else if (str[i] == ')') rb++;
-	}
-	if (lb == rb) return true;
-	return false;
-}
 
 
 //void parsing() {
@@ -227,7 +336,6 @@ bool bracketCheck(string str) {
 	//				lexems.push_back(lexema);
 	//				lexema = "";
 	//			}
-	//			//à òåïåðü ìîæåì è ñ íûíåøíåé ëåêñåìîé ðàçîáðàòüñÿ, óðà
 	//			lexema += l;
 	//			lexems.push_back(lexema);
 	//			lexema = "";

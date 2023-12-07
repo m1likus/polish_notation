@@ -1,7 +1,7 @@
 #include <gtest.h>
 #include "polish_notation.h"
 
-TEST(PARSING_TEST) {
+TEST(PARSING_OF_STR) {
     ASSERT_ANY_THROW();
 }
 
