@@ -18,12 +18,11 @@ int main() {
 		cin >> str;
 	}
 	arithmeticExpr expr(str);
-	try{expr.parse(expr.getInfix()); }
-	catch (...) {
-		cout << "something went wrong";
-		return 0;
-	};
-	expr.print();
+	//cout << expr.getInfix() << endl;;
+	//expr.print();
+	//cout << endl;
+	cout << expr.getPostfix() << endl;
+	//cout << expr.calculating();
 	/*
 	arithmeticExpr expr(str);
 	cout << expr.getInfix() << endl;

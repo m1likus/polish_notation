@@ -1,11 +1,13 @@
 #pragma once
 #include <string>
+#include <algorithm>
 #include <vector>
 #include <map>
-#include <set>
 #include <stack>
+#include <deque>
 #include <stdio.h>
 #include <iostream>
+#include <cmath>
 /*
 currentStatus 			lexemeType 			nextStatus
 waitSt					number				numberSt
@@ -90,6 +92,25 @@ bool bracketCheck(string str) {
 	else return false;
 }
 
+//вычисление функций
+double functionCalculating(string function, double operand) {
+	if (function == "sin") return sin(operand);
+	else if (function == "cos") return cos(operand);
+	else if (function == "tg") return tan(operand);
+	else if (function == "ctg") return (cos(operand) / sin(operand));
+}
+//вычисление с помощью операторов
+double operatorCalculating(string bin_operator, double rightOperand, double leftOperand) {
+	if (bin_operator == "+") return (leftOperand + rightOperand);
+	else if (bin_operator=="-") return (leftOperand - rightOperand);
+	else if (bin_operator=="*") return (leftOperand * rightOperand);
+	else if (bin_operator=="/") return (leftOperand / rightOperand);
+}
+//унарный минус
+double unOperator(double operand) {
+	return (0 - operand);
+}
+
 //виды лексем
 enum TypeLexeme {
 	number,
@@ -126,8 +147,9 @@ enum Status {
 
 struct arithmeticExpr {
 	string infix;
-	string postfix;
+	string postfixString;
 	vector<Lexema> lexems;
+	stack<Lexema> postfix;
 	map <char, int> priority;
 	
 	Lexema getLexema(string input, int pos, int& nextPos) {
@@ -213,7 +235,6 @@ public:
 		Status status = waitSt;
 		while (next_pos != input.size()) {
 			Lexema l = getLexema(input, pos, next_pos);
-			pos = next_pos;
 			switch (status) {
 			case waitSt:
 				if (l.type == number) status = numberSt;
@@ -221,8 +242,9 @@ public:
 				else if (l.type == function) status = funcSt;
 				else if (l.type == leftBracket) status = leftBracketSt;
 				else if (l.type == rightBracket) status = errorSt;
-				else if (l.type == un_minus) status = unMinSt;
-				else if (next_pos == input.size()) break;
+				else if (l.type == un_minus && next_pos!=input.size()) status = unMinSt;
+				else if (pos == input.size()) break;
+				else status = errorSt;
 				break;
 			case numberSt:
 				if (l.type == number) status = errorSt;
@@ -280,20 +302,88 @@ public:
 				break;
 			}
 			if (status == errorSt) {
-				throw("Error Status");
+				throw(1);
 				return;
 			}
+			pos = next_pos;
 			lexems.push_back(l);
 		}
 	}
 	void toPostfix() {
-		//parsing();
-
+		parse(infix);
+		stack <Lexema> st;
+		TypeLexeme checkType;
+		Lexema stackItem;
+		stack <Lexema> postfixReversed;
+		for (int i = 0; i < lexems.size(); i++) {
+			checkType = lexems[i].type;
+			switch (checkType) {
+			case leftBracket:
+				st.push(lexems[i]);
+				break;
+			case rightBracket:
+				stackItem = st.top();
+				st.pop();
+				while (stackItem.name != "(") {
+					postfixReversed.push(stackItem);
+					stackItem = st.top();
+					st.pop();
+				}
+				break;
+			case number:
+				postfixReversed.push(lexems[i]);
+				break;
+			case function:
+				st.push(lexems[i]);
+				break;
+			case un_minus:
+				st.push(lexems[i]);
+				break;
+			case bin_operator:
+				while (!st.empty()) {
+					stackItem = st.top();
+					st.pop();
+					if (( priority[lexems[i].name[0]] <= priority[stackItem.name[0]]) ||
+						(stackItem.type == function))
+						postfixReversed.push(stackItem);
+					else {
+						st.push(stackItem);
+						break;
+					}
+				}
+				st.push(lexems[i]);
+				break;
+			}
+		}
+		while (!st.empty()) {
+			stackItem = st.top();
+			st.pop();
+			postfixReversed.push(stackItem);
+		}
+		vector<Lexema> v;
+		while (!postfixReversed.empty()) {
+			postfix.push(postfixReversed.top());
+			v.push_back(postfixReversed.top());
+			postfixReversed.pop();
+		}
+		postfixString = toString(v);
+	}
+	//перевод в строку
+	string toString(vector<Lexema> v) {
+		string str = "";
+		while(!v.empty()){
+			if (v.back().type == number)
+				str += to_string(v.back().value);
+			else
+				str += v.back().name;
+			v.pop_back();
+		}
+		return str;
 	}
 	arithmeticExpr(string infx) : infix(infx) {
-		priority = { {'+',1},{'-',1}, {'/',2},{'*',2},
-			{'sin',2},{'cos',2}, {'tg',2},{'ctg',2},{'(',0}};
-		//toPostfix();
+		priority = { {'+',1},{'-',1}, {'/',2},{'*',2} };
+		if (!bracketCheck(infix)) throw(1);
+		toPostfix();
 	}
 	//вывод вектора лексем
 	void print() {
@@ -305,76 +395,38 @@ public:
 		return infix;
 	}
 	std::string getPostfix() {
-		return postfix;	
+		return postfixString;
 	}
 	double calculating(){
-
+		double leftOperand, rightOperand;
+		stack <double> st;
+		Lexema stackItem;
+		while (!postfix.empty()) {
+			stackItem = postfix.top();
+			postfix.pop();
+			switch (stackItem.type) {
+			case bin_operator:
+				rightOperand = st.top();
+				st.pop();
+				leftOperand = st.top();
+				st.pop();
+				st.push(operatorCalculating(stackItem.name, rightOperand, leftOperand));
+				break;
+			case function:
+				rightOperand = st.top();
+				st.pop();
+				st.push(functionCalculating(stackItem.name, rightOperand));
+				break;
+			case un_minus:
+				rightOperand = st.top();
+				st.pop();
+				st.push(unOperator(rightOperand));
+				break;
+			case number:
+				st.push(stackItem.value);
+				break;
+			}
+		}
+		return st.top();
 	}
 };
-
-
-//void parsing() {
-	//	//infix += "?";
-	//	set <char> operations = { '+','-','/','*','(', ')' };
-	//	set <char> numbers = { '0','1','2','3','4','5','6','7','8','9' };
-	//	set <char> func = { 's','i','n','c','o','t','g' };
-	//	string sin = "sin", cos = "cos", tg = "tg", ctg = "ctg";
-	//	string lexema = "";
-	//	for (int i = 0; i < infix.size(); i++) {
-	//		char l = infix[i];
-	//		if (operations.count(l)) {
-	//			//äâà âàðèàíòà ðàçâèòèÿ ñîáûòèé: ñòðîêà ïóñòàÿ è ñòðîêà íå ïóñòàÿ
-	//			//åñëè ñòðîêà íå ïóñòàÿ,òî íàäî ñíà÷àëà îïðåäåëèòü, ÷òî â íåé áûëî.
-	//			//åñëè ýòî íå ÷èñëî è íå ôóíêöèÿ èç ðàçðåøåííûõ
-	//			//òî âîçíèêàþò âîïðîñû êòî ýòî òàêîé, à çíà÷èò âûáðàñûâàåì îøèáî÷êó.
-	//			if (!lexema.empty()) {
-	//				if (lexema != sin && lexema != cos && lexema != tg && lexema != ctg
-	//					&& numbers.count(lexema.back()) == 0)
-	//					throw("wrong expression, bye-bye");
-	//				//òåïåðü, çíàÿ, ÷òî ìû íè÷åãî ëèøíåãî â ëåêñåìû íå âáðîñèì
-	//				//êèäàåì òóäà ñíà÷àëà òî, ÷òî áûëî äî îïåðàòîðà â ëåêñåìå
-	//				lexems.push_back(lexema);
-	//				lexema = "";
-	//			}
-	//			lexema += l;
-	//			lexems.push_back(lexema);
-	//			lexema = "";
-	//		}
-	//		if (numbers.count(l)) {
-	//			//àíàëîãè÷íî, ñòðîêà ì.á. ïóñòîé è íå ïóñòîé.
-	//			//åñëè íå ïóñòàÿ, òî òàì ëèáî ÷èñëî, ëèáî ôóíêöèÿ
-	//			//ëèáî ÷òî-òî, ÷òî ìû ìîæåì âûáðîñèòü â îøèáêó)
-	//			//îïåðàòîðà òàì áûòü íå ìîæåò, â ïðîøëîì if î÷èùàåòñÿ ñðàçó æå
-	//			if (!lexema.empty()) {
-	//				if (lexema == sin || lexema == cos || lexema == tg
-	//					|| lexema == ctg) {
-	//					lexems.push_back(lexema);
-	//					lexema = "";
-	//				}
-	//				else if (numbers.count(lexema.back())); //åñëè áûëî ÷èñëî, òî âñå îê, ïðîäîëæàåì
-	//				else throw ("wrong expression, bye-bye");
-	//			}
-	//			lexema += l;
-	//		}
-	//		if (func.count(l)) {
-	//			//åñëè íå ïóñòàÿ ñòðîêà äî,òî ÷òî òàì ìîæåò áûòü?
-	//			//åñëè ÷èñëî, î÷èùàåì
-	//			//åñëè ôóíêöèÿ = òîãäà îíà òî÷íî íåïîëíàÿ, ïîòîìó ÷òî ñåé÷àñ òîæå
-	//			//äîáàâëÿåì áóêâó îò ôóíêöèè
-	//			if (!lexema.empty()){
-	//				if (numbers.count(lexema.back())){ // êîíåö òî÷íî ÷èñëî
-	//					lexems.push_back(lexema);
-	//					lexema = "";
-	//				}
-	//				else if (lexema == "s" || lexema == "si" || lexema == "c"
-	//					|| lexema == "co" || lexema == "t" || lexema == "ct") {
-	//					lexems.push_back(lexema);
-	//					lexema = "";
-	//				}
-	//				//ïîëíîé ëåêñåìû òàì òî÷íî íå ì.á. ò.ê. òîãäà ýòî íåâåðíîå âûðàæåíèå
-	//				else throw ("wrong expression, bye-bye");
-	//			}
-	//			lexema += l;
-	//		}
-	//	}
-	//}
